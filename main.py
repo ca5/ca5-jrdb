@@ -161,11 +161,20 @@ class JRDBToGCS():
 
 def main(data, context):
     jrdb_to_gcs = JRDBToGCS(data['account'], data['password'], debug=data.get('debug', False))
-    start_date = datetime.datetime.strptime(data['start_date'], '%Y-%m-%d')
-    if not data.get('start_date', None):
-        end_date = start_date + datetime.timedelta(day=1)
-    else:
-        end_date = datetime.datetime.strptime(data['end_date'], '%Y-%m-%d')
+    today = datetime.datetime.now()
+    if data['mode'] == 'confirmed': #前週の確定値取得 (前週木-今週水)
+        start_date = today - datetime.timedelta(days=7)
+        end_date = today - datetime.timedelta(days=1)
+    elif data['mode'] == 'previous': #前日情報(=翌日の速報値)
+        start_date = today + datetime.timedelta(days=1)
+        end_date = start_date + datetime.timedelta(days=1)
+    else: # マニュアルモード
+        start_date = datetime.datetime.strptime(data['start_date'], '%Y-%m-%d')
+        if not data.get('start_date', None):
+            end_date = start_date + datetime.timedelta(days=1)
+        else:
+            end_date = datetime.datetime.strptime(data['end_date'], '%Y-%m-%d')
+    logging.info(f'start_date:{start_date}, end_date:{end_date}')
 
     current_date = start_date
     while current_date <= end_date:
