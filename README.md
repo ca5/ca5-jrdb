@@ -14,13 +14,19 @@ http://www.jrdb.com/member/data/
     → スキップ
 - 毎週日に当日の確定(SED,SEC,HJC,TYB)
     → スキップ
+## deploy
+```
+gcloud functions deploy main --runtime python38 --trigger-topic トピック名 --project プロジェクト名 --timeout タイムアウト値
+```
 
 ## メモ
 テスト実行メモ:
 
 ```
 functions-framework --target test --signature-type event
-curl -d '{"data":{"account":"アカウントID", "password":"パスワード"}}' -X POST  "Content-Type: application/json" http://localhost:8080
+
+PAYLOAD='{"account":"アカウントID", "password":"パスワード", "start_date": "2005-05-07", "end_date": "2005-05-09"}' && \
+curl -d '{"data": {"@type": "pubsub", "attributes":, "data":"'$(echo $PAYLOAD | base64 -w0)'"}}' -X POST -H "Content-Type: application/json" http://localhost:8080
 ```
 
 

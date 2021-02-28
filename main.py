@@ -8,6 +8,8 @@ import tempfile
 import zipfile
 import csv
 import re
+import base64
+import json
 import logging
 logging.basicConfig(level=logging.INFO)
 
@@ -160,20 +162,34 @@ class JRDBToGCS():
 
 
 def main(data, context):
-    jrdb_to_gcs = JRDBToGCS(data['account'], data['password'], debug=data.get('debug', False))
+    logging.info('data:')
+    logging.info(data)
+    logging.info('context:')
+    logging.info(context)
+    '''
+    dataの入り方例:
+    {
+        '@type': 'type.googleapis.com/google.pubsub.v1.PubsubMessage',
+        'attributes': None,
+        'data': 'スケジューラのペイロードで指定した文字列をBASE64変換したもの'
+    }
+    '''
+    decoded_data = json.loads(base64.b64decode(data['data']).decode())
+
+    jrdb_to_gcs = JRDBToGCS(decoded_data['account'], decoded_data['password'], debug=data.get('debug', False))
     today = datetime.datetime.now()
-    if data['mode'] == 'confirmed': #前週の確定値取得 (前週木-今週水)
+    if decoded_data['mode'] == 'confirmed': #前週の確定値取得 (前週木-今週水)
         start_date = today - datetime.timedelta(days=7)
         end_date = today - datetime.timedelta(days=1)
-    elif data['mode'] == 'previous': #前日情報(=翌日の速報値)
+    elif decoded_data['mode'] == 'previous': #前日情報(=翌日の速報値)
         start_date = today + datetime.timedelta(days=1)
         end_date = start_date + datetime.timedelta(days=1)
     else: # マニュアルモード
-        start_date = datetime.datetime.strptime(data['start_date'], '%Y-%m-%d')
+        start_date = datetime.datetime.strptime(decoded_data['start_date'], '%Y-%m-%d')
         if not data.get('start_date', None):
             end_date = start_date + datetime.timedelta(days=1)
         else:
-            end_date = datetime.datetime.strptime(data['end_date'], '%Y-%m-%d')
+            end_date = datetime.datetime.strptime(decoded_data['end_date'], '%Y-%m-%d')
     logging.info(f'start_date:{start_date}, end_date:{end_date}')
 
     current_date = start_date
@@ -204,13 +220,16 @@ def main(data, context):
 def test(data, context):
     print("data:")
     print(data)
+    decoded_data = json.loads(base64.b64decode(data['data']).decode())
+    print("decoded_data:")
+    print(decoded_data)
     print("context:")
     print(context)
-    jrdb_to_gcs = JRDBToGCS(data['account'], data['password'], debug=True)
+    jrdb_to_gcs = JRDBToGCS(decoded_data['account'], decoded_data['password'], debug=True)
     print("get_race_date_list:")
     print(jrdb_to_gcs.get_race_date_list())
     print("check_date:")
-    start_date = datetime.datetime.strptime(data['start_date'], '%Y-%m-%d')
+    start_date = datetime.datetime.strptime(decoded_data['start_date'], '%Y-%m-%d')
     print(jrdb_to_gcs.is_race_date(start_date))
     print("get_and_extract_zip:")
     data_type = "sed"
