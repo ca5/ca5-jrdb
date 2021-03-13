@@ -11,7 +11,6 @@ import re
 import base64
 import json
 import logging
-logging.basicConfig(level=logging.INFO)
 
 import requests
 from bs4 import BeautifulSoup
@@ -30,6 +29,10 @@ class JRDBToGCS():
         self._metadata = {}
         if debug:
             logging.basicConfig(level=logging.DEBUG)
+            logging.debug('debug on')
+        else:
+            logging.basicConfig(level=logging.INFO)
+
 
     def get_race_date_list(self):
         # レース日一覧の取得
@@ -107,9 +110,10 @@ class JRDBToGCS():
                 break
             csv_line = []
             b_total = 0
+            logging.debug("line(cp932): " + raw_line.decode('cp932'))
             for b in metadata.byte.values:
                 try:
-                    cell = raw_line[b_total:b_total+int(b)].rstrip()
+                    cell = raw_line[b_total:b_total+int(b)].decode('cp932').rstrip()
                     csv_line.append(cell)
                 except Exception as e:
                     logging.error(e)
@@ -132,7 +136,7 @@ class JRDBToGCS():
                 cache_discovery=False)
             
             for src_path in glob.glob(os.path.join(tmpdir, '*')):
-                with open(src_path, 'r',  encoding='cp932') as src_fp, tempfile.NamedTemporaryFile(mode='w') as converted_fp:
+                with open(src_path, mode='rb') as src_fp, tempfile.NamedTemporaryFile(mode='w') as converted_fp:
                     src_file_name =  os.path.basename(src_path)
                     file_type = src_file_name[0: re.search('[0-9]', src_file_name).span()[0]].lower()
                     logging.debug('file_type: {}'.format(file_type))
@@ -236,9 +240,9 @@ def test(data, context):
     print(jrdb_to_gcs.get_and_extract_zip(data_type, start_date, '/tmp/jrdbtest'))
     start_date_ymd = start_date.strftime('%y%m%d')
     print("property:")
-    print(jrdb_to_gcs.metadata)
+    print(jrdb_to_gcs.metadata['sed'])
     print("convert_text_to_csv:")
-    with open(f'/tmp/jrdbtest/SED{start_date_ymd}.txt', 'r', encoding='cp932') as src_fp: # inputはcp932指定
+    with open(f'/tmp/jrdbtest/SED{start_date_ymd}.txt', mode='rb') as src_fp: # inputはbyte
         with open(f'/tmp/jrdbtest/SED{start_date_ymd}_utf8.csv', 'w') as dest_fp: # outputはutf8(default)
             print(jrdb_to_gcs.convert_text_to_csv(src_fp, dest_fp, jrdb_to_gcs.metadata['sed']))
     print("download_and_convert_and_upload:")
