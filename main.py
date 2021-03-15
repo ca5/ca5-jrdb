@@ -20,6 +20,7 @@ from googleapiclient.http import MediaFileUpload
 from googleapiclient.discovery import build
 from httplib2 import Http
 from oauth2client.client import GoogleCredentials
+import google.auth
 
 
 class JRDBToGCS():
@@ -89,6 +90,13 @@ class JRDBToGCS():
 
     @property
     def metadata(self):
+        # 参考: https://zenn.dev/justice_vsbr/articles/a7c83ce506444d
+        # Cloud Shell 上ではscope指定しなくても動くが, Cloud Function上では必要
+        credentials, _ = google.auth.default(
+            scopes=[
+                "https://www.googleapis.com/auth/drive",
+                "https://www.googleapis.com/auth/bigquery",
+            ])
         if len(self._metadata) == 0: #初回のみ
             for table in ['sed', 'srb', 'kta']:
                 self._metadata[table] = pd.read_gbq('''
@@ -97,7 +105,7 @@ class JRDBToGCS():
                     FROM
                         metadata.{}
                     ORDER BY index
-                    '''.format(table), project_id='ca5-jrdb', dialect='standard')
+                    '''.format(table), project_id='ca5-jrdb', dialect='standard', credentials=credentials)
         return self._metadata
 
     def convert_text_to_csv(self, src_fp, dest_fp, metadata):
@@ -241,9 +249,9 @@ def test(data, context):
     start_date_ymd = start_date.strftime('%y%m%d')
     print("property:")
     print(jrdb_to_gcs.metadata['sed'])
-    print("convert_text_to_csv:")
-    with open(f'/tmp/jrdbtest/SED{start_date_ymd}.txt', mode='rb') as src_fp: # inputはbyte
-        with open(f'/tmp/jrdbtest/SED{start_date_ymd}_utf8.csv', 'w') as dest_fp: # outputはutf8(default)
-            print(jrdb_to_gcs.convert_text_to_csv(src_fp, dest_fp, jrdb_to_gcs.metadata['sed']))
+    # print("convert_text_to_csv:")
+    # with open(f'/tmp/jrdbtest/SED{start_date_ymd}.txt', mode='rb') as src_fp: # inputはbyte
+    #     with open(f'/tmp/jrdbtest/SED{start_date_ymd}_utf8.csv', 'w') as dest_fp: # outputはutf8(default)
+    #         print(jrdb_to_gcs.convert_text_to_csv(src_fp, dest_fp, jrdb_to_gcs.metadata['sed']))
     print("download_and_convert_and_upload:")
     print(jrdb_to_gcs.download_and_convert_and_upload('sed', start_date))
