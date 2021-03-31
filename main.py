@@ -158,8 +158,7 @@ class JRDBToGCS():
                                             mimetype='text/plain',
                                             resumable=True)
                     date_str = date.strftime('%Y-%m-%d')
-                    file_prefix = re.search(r'^([A-Z]+)', dest_file_name).group().lower()
-                    dest_full_path = os.path.join('raw', file_prefix, f'dt={date_str}', f'zip_type={zip_type}', f'{dest_file_name}')
+                    dest_full_path = os.path.join('raw', f'dt={date_str}', f'zip_type={zip_type}', f'file_type={file_type}', f'{dest_file_name}')
                     gcs_request = gcs_service.objects().insert(bucket='ca5-jrdb',
                                                         name=dest_full_path,
                                                         media_body=media)
@@ -210,11 +209,11 @@ def main(data, context):
             print('start download: {}'.format(current_date))
             for zip_type in [
                 # 前日データ
-                #'paci',
+                'paci',
 
                 # 成績データ
-                'sed', #'skb', 
-                #'tyb', 'hjc'
+                'sed', 'skb', 
+                'tyb', 'hjc'
 
                 # masterデータ
                 # 直近のものしか残ってないかも
