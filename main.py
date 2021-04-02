@@ -98,7 +98,7 @@ class JRDBToGCS():
                 "https://www.googleapis.com/auth/bigquery",
             ])
         if len(self._metadata) == 0: #初回のみ
-            for table in ['sed', 'srb', 'kta']:
+            for table in ['sed', 'srb', 'kta', 'cza', 'kza', 'kyi']:
                 self._metadata[table] = pd.read_gbq('''
                     SELECT
                         *
@@ -152,7 +152,7 @@ class JRDBToGCS():
                         self.convert_text_to_csv(src_fp, converted_fp, self.metadata[file_type])
                         dest_file_name = src_file_name.replace('.txt', '.csv')
                     else:
-                        logging.info('skip {}'.format(file_type))
+                        logging.info('metadata is None, skip {}'.format(file_type))
                         continue
                     media = MediaFileUpload(converted_fp.name, 
                                             mimetype='text/plain',
@@ -213,7 +213,7 @@ def main(data, context):
 
                 # 成績データ
                 'sed', 'skb', 
-                'tyb', 'hjc'
+                #'tyb', 'hjc',
 
                 # masterデータ
                 # 直近のものしか残ってないかも
