@@ -29,10 +29,12 @@ class JRDBToGCS():
         self.password = password
         self._metadata = {}
         if debug:
-            logging.basicConfig(level=logging.DEBUG)
-            logging.debug('debug on')
+            self.logger = logging.getLogger(__name__)
+            self.logger.setLevel(logging.DEBUG)
+            self.logger.debug('debug on')
         else:
-            logging.basicConfig(level=logging.INFO)
+            self.logger = logging.getLogger(__name__)
+            self.logger.setLevel(logging.INFO)
 
 
     def get_race_date_list(self):
@@ -42,7 +44,7 @@ class JRDBToGCS():
             'http://www.jrdb.com/member/datazip/Kab/index.html',
             auth=(self.account, self.password)
             )
-        logging.debug(r.status_code)
+        self.logger.debug(r.status_code)
         soup = BeautifulSoup(r.content, 'html.parser')
         return [a.get_text()[3:9] for a in soup.find_all('ul')[1].find_all('a')]
 
@@ -50,7 +52,7 @@ class JRDBToGCS():
         # 指定した日が開催日かどうか
         yymmdd = str(date.year)[2:] + str(date.month).zfill(2) + str(date.day).zfill(2)
         if yymmdd not in self.get_race_date_list():
-            logging.info("Not race day. skip: {}".format(yymmdd))
+            self.logger.info("Not race day. skip: {}".format(yymmdd))
             return False
         else:
             return True
@@ -72,7 +74,7 @@ class JRDBToGCS():
             TYPE=data_type.upper(),
             YYMMDD=yymmdd
         )
-        logging.info('download from: {}'.format(remote_path))
+        self.logger.info('download from: {}'.format(remote_path))
         r = requests.get(
             remote_path,
             auth=(self.account, self.password)
@@ -106,10 +108,11 @@ class JRDBToGCS():
                         metadata.{}
                     ORDER BY index
                     '''.format(table), project_id='ca5-jrdb', dialect='standard', credentials=credentials)
+        print(self._metadata)
         return self._metadata
 
     def convert_text_to_csv(self, src_fp, dest_fp, metadata):
-        logging.debug('convert sjis.txt -> utf8.csv')
+        self.logger.debug('convert sjis.txt -> utf8.csv')
         writer = csv.writer(dest_fp, quoting=csv.QUOTE_ALL) #デフォルトのQUOTE_MINIMALだとうまく行かない場合がある
         writer.writerow(metadata.name.values)
         while True:
@@ -118,14 +121,14 @@ class JRDBToGCS():
                 break
             csv_line = []
             b_total = 0
-            logging.debug("line(cp932): " + raw_line.decode('cp932'))
+            self.logger.debug("line(cp932): " + raw_line.decode('cp932'))
             for b in metadata.byte.values:
                 try:
                     cell = raw_line[b_total:b_total+int(b)].decode('cp932').rstrip()
                     csv_line.append(cell)
                 except Exception as e:
-                    logging.error(e)
-                    logging.error(raw_line[b_total:b_total+int(b)])
+                    self.logger.error(e)
+                    self.logger.error(raw_line[b_total:b_total+int(b)])
                     break
                 finally:
                     b_total += int(b)
@@ -147,12 +150,12 @@ class JRDBToGCS():
                 with open(src_path, mode='rb') as src_fp, tempfile.NamedTemporaryFile(mode='w') as converted_fp:
                     src_file_name =  os.path.basename(src_path)
                     file_type = src_file_name[0: re.search('[0-9]', src_file_name).span()[0]].lower()
-                    logging.debug('file_type: {}'.format(file_type))
+                    self.logger.debug('file_type: {}'.format(file_type))
                     if self.metadata.get(file_type, None) is not None:
                         self.convert_text_to_csv(src_fp, converted_fp, self.metadata[file_type])
                         dest_file_name = src_file_name.replace('.txt', '.csv')
                     else:
-                        logging.info('metadata is None, skip {}'.format(file_type))
+                        self.logger.info('metadata is None, skip {}'.format(file_type))
                         continue
                     media = MediaFileUpload(converted_fp.name, 
                                             mimetype='text/plain',
@@ -167,9 +170,9 @@ class JRDBToGCS():
                         try:
                             _, gcs_response = gcs_request.next_chunk()
                         except Exception as e:
-                            logging.error(e)
+                            self.logger.error(e)
                             break
-                    logging.info('Upload complete: {}'.format(dest_full_path))
+                    self.logger.info('Upload complete: {}'.format(dest_full_path))
 
 
 def main(data, context):
