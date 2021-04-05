@@ -165,7 +165,7 @@ class JRDBToGCS():
                                             mimetype='text/plain',
                                             resumable=True)
                     date_str = date.strftime('%Y-%m-%d')
-                    dest_full_path = os.path.join('raw', f'dt={date_str}', f'zip_type={zip_type}', f'file_type={file_type}', f'{dest_file_name}')
+                    dest_full_path = os.path.join('raw', file_type, f'dt={date_str}', f'zip_type={zip_type}', f'{dest_file_name}')
                     gcs_request = gcs_service.objects().insert(bucket='ca5-jrdb',
                                                         name=dest_full_path,
                                                         media_body=media)
