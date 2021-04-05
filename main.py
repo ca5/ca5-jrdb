@@ -108,7 +108,6 @@ class JRDBToGCS():
                         metadata.{}
                     ORDER BY index
                     '''.format(table), project_id='ca5-jrdb', dialect='standard', credentials=credentials)
-        print(self._metadata)
         return self._metadata
 
     def convert_text_to_csv(self, src_fp, dest_fp, metadata):
@@ -121,14 +120,16 @@ class JRDBToGCS():
                 break
             csv_line = []
             b_total = 0
-            self.logger.debug("line(cp932): " + raw_line.decode('cp932'))
-            for b in metadata.byte.values:
+            for i, b in enumerate(metadata.byte.values):
                 try:
                     cell = raw_line[b_total:b_total+int(b)].decode('cp932').rstrip()
                     csv_line.append(cell)
                 except Exception as e:
                     self.logger.error(e)
+                    self.logger.error(metadata.name.values[i])
                     self.logger.error(raw_line[b_total:b_total+int(b)])
+                    self.logger.error("csv_line: " + ",".join(csv_line))
+                    self.logger.error("line(cp932): " + raw_line.decode('cp932'))
                     break
                 finally:
                     b_total += int(b)
@@ -138,19 +139,22 @@ class JRDBToGCS():
         with tempfile.TemporaryDirectory() as tmpdir:
             if not self.get_and_extract_zip(zip_type, date, tmpdir):
                 return
+            self.logger.debug('get_and_extract')
             # 参考: https://qiita.com/kai_kou/items/4b754c61ac225daa0f7d
             credentials = GoogleCredentials.get_application_default()
+            self.logger.debug('set credentials')
             gcs_service = build(
                 'storage',
                 'v1',
                 http=credentials.authorize(Http()),
                 cache_discovery=False)
+            self.logger.debug('authlized')
             
             for src_path in glob.glob(os.path.join(tmpdir, '*')):
                 with open(src_path, mode='rb') as src_fp, tempfile.NamedTemporaryFile(mode='w') as converted_fp:
                     src_file_name =  os.path.basename(src_path)
                     file_type = src_file_name[0: re.search('[0-9]', src_file_name).span()[0]].lower()
-                    self.logger.debug('file_type: {}'.format(file_type))
+                    self.logger.info('file_type: {}'.format(file_type))
                     if self.metadata.get(file_type, None) is not None:
                         self.convert_text_to_csv(src_fp, converted_fp, self.metadata[file_type])
                         dest_file_name = src_file_name.replace('.txt', '.csv')
@@ -170,6 +174,7 @@ class JRDBToGCS():
                         try:
                             _, gcs_response = gcs_request.next_chunk()
                         except Exception as e:
+                            self.logger.error('cannot upload to gcs')
                             self.logger.error(e)
                             break
                     self.logger.info('Upload complete: {}'.format(dest_full_path))
