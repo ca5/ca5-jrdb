@@ -60,6 +60,7 @@ class JRDBToGCS():
     def get_and_extract_zip(self, data_type, date, dest_path):
         # ファイル種別毎にDL+解答
         yymmdd = str(date.year)[2:] + str(date.month).zfill(2) + str(date.day).zfill(2)
+        self.logger.debug(f'date: {yymmdd}')
         if not self.is_race_date(date):
             return False
 
@@ -106,6 +107,7 @@ class JRDBToGCS():
                         *
                     FROM
                         metadata.{}
+                    WHERE index IS NOT NULL
                     ORDER BY index
                     '''.format(table), project_id='ca5-jrdb', dialect='standard', credentials=credentials)
         return self._metadata
