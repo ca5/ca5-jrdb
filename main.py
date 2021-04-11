@@ -137,16 +137,21 @@ class JRDBToGCS():
 
     def download_and_convert_and_upload(self, zip_type, date):
         with tempfile.TemporaryDirectory() as tmpdir:
+            self.logger.debug('download_and_convert_and_upload')
             if not self.get_and_extract_zip(zip_type, date, tmpdir):
                 return
             self.logger.debug('get_and_extract')
             # 参考: https://qiita.com/kai_kou/items/4b754c61ac225daa0f7d
             credentials = GoogleCredentials.get_application_default()
             self.logger.debug('set credentials')
+            #gcs_service = build(
+            #    'storage',
+            #    'v1',
+            #    http=credentials.authorize(Http()),
+            #    cache_discovery=False)
             gcs_service = build(
                 'storage',
                 'v1',
-                http=credentials.authorize(Http()),
                 cache_discovery=False)
             self.logger.debug('authlized')
             
