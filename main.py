@@ -212,7 +212,7 @@ def main(data, context):
         end_date = start_date + datetime.timedelta(days=1)
     else: # マニュアルモード
         start_date = datetime.datetime.strptime(decoded_data['start_date'], '%Y-%m-%d')
-        if not data.get('start_date', None):
+        if not decoded_data.get('end_date', None):
             end_date = start_date + datetime.timedelta(days=1)
         else:
             end_date = datetime.datetime.strptime(decoded_data['end_date'], '%Y-%m-%d')
